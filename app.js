@@ -66,6 +66,6 @@ app.use("/campgrounds/:id/comments", commentRoutes);
 // set the server port, and start the server
 // === === ===
 const PORT = 5000;
-app.listen(process.env.port || PORT, process.env.IP, () => {
+app.listen(process.env.port, process.env.IP, () => {
   console.log("YelpCamp Server has Started!");
 });
