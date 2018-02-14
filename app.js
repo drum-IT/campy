@@ -10,7 +10,9 @@ const passport = require("passport");
 // === === ===
 // connect to database and configure express server
 // === === ===
-mongoose.connect("mongodb://localhost/yelp_camp");
+// mongoose.connect("mongodb://localhost/yelp_camp");
+mongoose.connect("mongodb://campydb:SGAkjUqznGdbxd8eKCN3@ds235708.mlab.com:35708/heroku_dz4pp4js");
+
 const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.set("view engine", "ejs");
