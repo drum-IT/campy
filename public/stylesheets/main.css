@@ -1,0 +1,19 @@
+* {
+  box-sizing: border-box;
+}
+
+.thumbnail {
+  padding: 0;
+}
+
+.thumbnail img {
+  width: 100%;
+}
+
+.thumbnail .caption-full {
+  padding: 9px;
+}
+
+.delete-form {
+  display: inline;
+}
