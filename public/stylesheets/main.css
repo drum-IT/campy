@@ -17,3 +17,11 @@
 .delete-form {
   display: inline;
 }
+
+.admin {
+  color: tomato !important;
+}
+
+.user {
+  color: mediumseagreen !important;
+}

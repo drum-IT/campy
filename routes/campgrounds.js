@@ -3,6 +3,29 @@ const router = express.Router();
 const Campground = require("../models/campground");
 const middleware = require("../middleware/index");
 
+const multer = require("multer");
+const storage = multer.diskStorage({
+  filename: function(req, file, callback) {
+    callback(null, Date.now() + file.originalname);
+  }
+});
+const imageFilter = function(req, file, cb) {
+  // accept image files only
+  if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/i)) {
+    return cb(new Error("Only image files are allowed!"), false);
+  }
+  cb(null, true);
+};
+const upload = multer({ storage: storage, fileFilter: imageFilter });
+const cloudinary = require("cloudinary");
+cloudinary.config({
+  cloud_name: "drumit",
+  // api_key: process.env.CLOUDINARY_API_KEY,
+  // api_secret: process.env.CLOUDINARY_API_SECRET
+  api_key: "365484345515932",
+  api_secret: "FPFWYvpFdWHovzzBKw-WSKqF7gI"
+});
+
 // show all campgrounds
 router.get("/", (req, res) => {
   Campground.find({}, (err, campgrounds) => {
@@ -10,7 +33,7 @@ router.get("/", (req, res) => {
       req.flash("error", "A database error has occurred.");
       res.redirect("back");
     } else {
-      res.render("campgrounds/index", { campgrounds });
+      res.render("campgrounds/index", { campgrounds, page: "campgrounds" });
     }
   });
 });
@@ -42,28 +65,28 @@ router.get("/:id/edit", middleware.checkCampgroundOwnership, (req, res) => {
 });
 
 // create a new campground in the database
-router.post("/", middleware.isLoggedIn, (req, res) => {
-  const name = req.body.name;
-  const image = `https://source.unsplash.com/random/700x400/?${req.body.image}`;
-  const description = req.body.description;
-  const author = { id: req.user._id, username: req.user.username };
-  const newCampground = { name, image, description, author };
-  Campground.create(newCampground, (err, campground) => {
-    if (err) {
-      req.flash("error", "A database error has occurred.");
-      res.redirect("back");
-    } else {
-      req.flash("success", "Campground created.");
-      res.redirect(`campgrounds/${campground._id}`);
-    }
+router.post("/", middleware.isLoggedIn, upload.single("image"), (req, res) => {
+  cloudinary.uploader.upload(req.file.path, (result) => {
+    // add cloudinary url for the image to the campground object under image property
+    req.body.campground.image = result.secure_url;
+    // add author to campground
+    req.body.campground.author = {
+      id: req.user._id,
+      username: req.user.username
+    };
+    Campground.create(req.body.campground, (err, campground) => {
+      if (err) {
+        req.flash("error", err.message);
+        return res.redirect("back");
+      }
+      res.redirect(`/campgrounds/${campground.id}`);
+    });
   });
 });
 
 // update a campground
 router.put("/:id", middleware.checkCampgroundOwnership, (req, res) => {
-  req.body.campground.image = `https://source.unsplash.com/random/700x400/?${
-    req.body.campground.image
-  }`;
+  // req.body.campground.image = `https://source.unsplash.com/random/700x400/?${req.body.campground.image}`;
   Campground.findByIdAndUpdate(
     req.params.id,
     req.body.campground,

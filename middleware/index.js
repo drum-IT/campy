@@ -10,10 +10,10 @@ middleware.checkCampgroundOwnership = (req, res, next) => {
         res.redirect("back");
       } else {
         if (!campground) {
-          req.flash("error", "A database error has occurred.");
+          req.flash("error", "That campground no longer exists.");
           return res.redirect("back");
         }
-        if (campground.author.id.equals(req.user._id)) {
+        if (req.user.isAdmin || campground.author.id.equals(req.user._id)) {
           next();
         } else {
           req.flash("error", "You do not have permission to do that.");
@@ -38,7 +38,7 @@ middleware.checkCommentOwnership = (req, res, next) => {
           req.flash("error", "A database error has occurred.");
           return res.redirect("back");
         }
-        if (comment.author.id.equals(req.user._id)) {
+        if (req.user.isAdmin || comment.author.id.equals(req.user._id)) {
           next();
         } else {
           req.flash("error", "You do not have permission to do that.");

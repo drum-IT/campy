@@ -3,6 +3,7 @@ const router = express.Router();
 const passport = require("passport");
 const User = require("../models/user");
 const middleware = require("../middleware/index");
+const Campground = require("../models/campground");
 
 router.get("/", (req, res) => {
   res.render("landing");
@@ -10,12 +11,12 @@ router.get("/", (req, res) => {
 
 // show the register form
 router.get("/register", (req, res) => {
-  res.render("register");
+  res.render("register", { page: "register" });
 });
 
 // show the login form
 router.get("/login", (req, res) => {
-  res.render("login");
+  res.render("login", { page: "login" });
 });
 
 // show the logout form
@@ -27,8 +28,20 @@ router.get("/logout", (req, res) => {
 
 // create a new user, add them to the database, and authenticate them
 router.post("/register", (req, res) => {
-  const user = new User({ username: req.body.username });
-  User.register(user, req.body.password, (err, user) => {
+  const user = new User(
+    {
+      username: req.body.username,
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
+      email: req.body.email,
+      avatar: req.body.avatar,
+      bio: req.body.bio
+    }
+  );
+  if (req.body.adminCode === "admin") {
+    user.isAdmin = true;
+  }
+  User.register(user, req.body.password, (err, newUser) => {
     if (err) {
       req.flash("error", err.message);
       console.log(err);
@@ -38,7 +51,7 @@ router.post("/register", (req, res) => {
       req.flash(
         "success",
         `You have successfully signed up! Thanks for joining Campy, ${
-          req.body.username
+          newUser.username
         }!`
       );
       res.redirect("/campgrounds");
@@ -55,5 +68,26 @@ router.post(
   }),
   (req, res) => {}
 );
+
+router.get("/users/:user_id", (req, res) => {
+  User.findById(req.params.user_id, (err, user) => {
+    if (err) {
+      req.flash("error", "A database error has occurred.");
+      res.redirect("back");
+    } else if(!user) {
+      req.flash("error", "That user no longer exists.");
+      res.redirect("back");
+    } else {
+      Campground.find().where("author.id").equals(user._id).exec((err, campgrounds) => {
+        if (err) {
+          req.flash("error", "A database error has occurred.");
+          res.redirect("back");
+        } else {
+          res.render("users/show", { user, campgrounds });
+        }
+      });
+    }
+  });
+});
 
 module.exports = router;
