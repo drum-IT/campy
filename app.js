@@ -1,4 +1,6 @@
-// get everything we need
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
 const bodyParser = require("body-parser");
 const flash = require("connect-flash");
 const express = require("express");
@@ -10,8 +12,7 @@ const passport = require("passport");
 // === === ===
 // connect to database and configure express server
 // === === ===
-// mongoose.connect("mongodb://localhost/yelp_camp");
-mongoose.connect("mongodb://campydb:SGAkjUqznGdbxd8eKCN3@ds235708.mlab.com:35708/heroku_dz4pp4js");
+mongoose.connect(process.env.DATABASE_URL);
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -66,7 +67,7 @@ app.use("/campgrounds/:id/comments", commentRoutes);
 // === === ===
 // set the server port, and start the server
 // === === ===
-const PORT = 5000;
-app.listen(process.env.PORT, process.env.IP, () => {
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, process.env.IP, () => {
   console.log("YelpCamp Server has Started!");
 });
