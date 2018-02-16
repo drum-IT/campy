@@ -70,12 +70,15 @@ router.post("/register", (req, res) => {
 router.post(
   "/login",
   passport.authenticate("local", {
-    successRedirect: "/campgrounds",
+    // successRedirect: "/campgrounds",
     failureRedirect: "/login",
-    failureFlash: true,
-    successFlash: "Welcome back!"
+    failureFlash: true
+    // successFlash: "Welcome back!"
   }),
-  (req, res) => {}
+  (req, res) => {
+    req.flash("success", `Welcome back, ${req.user.username}!`);
+    res.redirect("/campgrounds");
+  }
 );
 
 router.get("/reset/:token", (req, res) => {

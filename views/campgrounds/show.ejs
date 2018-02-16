@@ -2,11 +2,12 @@
   <div class="row">
     <div class="col-md-3">
       <p class="lead">Campy</p>
-      <div class="list-group">
+      <!-- <div class="list-group">
         <li class="list-group-item active">Info 1</li>
         <li class="list-group-item">Info 2</li>
         <li class="list-group-item">Info 3</li>
-      </div>
+      </div> -->
+      <div id="map"></div>
     </div>
     <div class="col-md-9">
       <div class="thumbnail">
@@ -38,31 +39,119 @@
           <% } %>
         </div>
       </div>
+      
       <div class="well">
         <div class="text-right">
-          <a class="btn btn-success" href="/campgrounds/<%= campground._id %>/comments/new">Add a Comment</a>
+          <a class="btn btn-success" role="button" data-toggle="collapse" href="#collapseComment" aria-expanded="false" aria-controls="collapseComment">
+            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add a Comment
+          </a>
+        </div>
+        <h4><strong>Comments <span class="glyphicon glyphicon glyphicon-comment" aria-hidden="true"></span></strong></h4>
+        <div class="collapse" id="collapseComment">
+          <div class="well" style="border-left: 5px solid #00C851;">
+            <% if (!user) { %>
+                <h5>You need to <a href="/login">log in</a> before you can add a comment</h5>
+            <% } %>
+            <% if (user) { %>
+                <h4>Add your comment <span class="glyphicon glyphicon glyphicon-pencil" aria-hidden="true"></span></h4>
+                <form action="/campgrounds/<%= campground._id %>/comments" id="add-comment-form" method="POST">
+                  <div class="form-group">
+                    <input type="text" disabled value="<%= user.username %>">
+                  </div>
+                  <div class="form-group">
+                    <textarea class="form-control" name="comment[text]" placeholder="Enter comment..." form="add-comment-form" rows="5" cols="70"></textarea>
+                  </div>
+                  <div class="form-group">
+                    <button class="btn btn-success btn-sm">Comment <span class="glyphicon glyphicon-comment" aria-hidden="true"></span></button>
+                  </div>
+                </form>
+            <% } %>
+          </div>
         </div>
         <hr>
+        <% if (campground.comments.length === 0) { %>
+            <em style="color: grey;">No comments yet.</em>
+        <% } %>
         <% campground.comments.forEach(comment => { %>
           <div class="row">
             <div class="col-md-12">
               <strong>
-                <a href="/users/<%= comment.author.id %>"><%= comment.author.username %></a>
+                <% if (user && user._id.equals(comment.author.id)) { %>
+                  <span style="color: orange;" class="glyphicon glyphicon-user" aria-hidden="true"></span>
+                  <a href="/users/<%= comment.author.id %>"><%= comment.author.username %></a>   
+                <% } else { %>
+                  <span class="glyphicon glyphicon-user" aria-hidden="true"></span>
+                  <a href="/users/<%= comment.author.id %>"><%= comment.author.username %></a>
+                <% } %>
               </strong>
               <span class="pull-right"><%= moment(comment.createdAt).fromNow() %></span>
               <p>
                 <%= comment.text %>
               </p>
               <% if (user && (comment.author.id.equals(user._id) || user.isAdmin)) { %> 
-                <a href="/campgrounds/<%= campground._id %>/comments/<%= comment._id %>/edit" class="btn btn-xs btn-warning">Edit</a>
-                <form class="delete-form" action="/campgrounds/<%= campground._id %>/comments/<%= comment._id %>?_method=DELETE" method="POST">
+                <a class="btn btn-xs btn-warning" role="button" data-toggle="collapse" href="#collapseEdit<%= comment._id %>" aria-expanded="false" aria-controls="collapse<%= comment._id %>">Edit</a>
+                <form id="delete-form" action="/campgrounds/<%= campground._id %>/comments/<%= comment._id %>?_method=DELETE" method="POST" style="display: inline;">
                   <button class="btn btn-xs btn-danger">Delete</button>
                 </form>
+                <div class="collapse" id="collapseEdit<%= comment._id %>">
+                  <div class="well" style="border-left: 5px solid #ffbb33; margin-top: 15px;">
+                    <h4>Edit your comment <span class="glyphicon glyphicon-edit" aria-hidden="true"></span></h4>
+                    <form id="edit-comment-form<%= comment._id %>" action="/campgrounds/<%= campground._id %>/comments/<%= comment._id %>?_method=PUT" method="POST">
+                      <div class="form-group">
+                        <input class="form-control" type="text" disabled value="<%= user.username %>">
+                      </div>
+                      <div class="form-group">
+                        <textarea class="form-control" name="comment[text]" placeholder="Your comment text..." form="edit-comment-form<%= comment._id %>" rows="5" cols="70"><%= comment.text %></textarea>
+                      </div>
+                      <div class="form-group">
+                        <button class="btn btn-warning btn-sm">Edit comment <span class="glyphicon glyphicon-comment" aria-hidden="true"></span></button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
               <% } %>
             </div>
+            <hr>
           </div>
         <% }); %>
       </div>
     </div>
   </div>
+  <!-- <script>
+    mapboxgl.accessToken = 'pk.eyJ1IjoiZHJ1bS1pdCIsImEiOiJfUlRFbXRFIn0.ZXtWeAx2agq_Dw-wUBhEhQ';
+      const map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/light-v9',
+      center: [<%= campground.lng %>, <%= campground.lat %>],
+      zoom: 10
+    });
+  </script> -->
+  <script>
+      function initMap() {
+        var lat = <%= campground.lat %>;
+        var lng = <%= campground.lng %>;
+        var center = {lat: lat, lng: lng };
+        var map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 10,
+            center: center,
+            scrollwheel: false
+        });
+        var contentString = `
+          <strong><%= campground.name %><br />
+          <%= campground.location %></strong>
+          <p><%= campground.description %></p>
+        `;
+        var infowindow = new google.maps.InfoWindow({
+          content: contentString
+        });
+        var marker = new google.maps.Marker({
+            position: center,
+            map: map
+        });
+        marker.addListener('click', function() {
+          infowindow.open(map, marker);
+        });
+      }
+    </script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBkG1A5_yShdNoNWB6QiT0zKt3ieYQRlF0&callback=initMap"></script>
 <% include ../partials/footer %>

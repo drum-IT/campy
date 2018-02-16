@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Campground = require("../models/campground");
 const middleware = require("../middleware/index");
+const geocoder = require("geocoder");
 
 const multer = require("multer");
 const storage = multer.diskStorage({
@@ -50,7 +51,7 @@ router.get("/:id", (req, res) => {
         req.flash("error", "A database error has occurred.");
         res.redirect("back");
       } else {
-        res.render("campgrounds/show", { campground });
+        res.render("campgrounds/show", { campground, gmapAPIKey: process.env.GMAP_API_KEY });
       }
     });
 });
@@ -64,7 +65,9 @@ router.get("/:id/edit", middleware.checkCampgroundOwnership, (req, res) => {
 
 // create a new campground in the database
 router.post("/", middleware.isLoggedIn, upload.single("image"), (req, res) => {
-  cloudinary.uploader.upload(req.file.path, result => {
+  cloudinary.v2.uploader.upload(req.file.path,
+    { width: 1000, height: 1000, crop: "limit" },
+    (error, result) => {
     // add cloudinary url for the image to the campground object under image property
     req.body.campground.image = result.secure_url;
     req.body.campground.imageID = result.public_id;
@@ -73,34 +76,50 @@ router.post("/", middleware.isLoggedIn, upload.single("image"), (req, res) => {
       id: req.user._id,
       username: req.user.username
     };
-    Campground.create(req.body.campground, (err, campground) => {
-      if (err) {
-        req.flash("error", err.message);
-        return res.redirect("back");
-      }
-      res.redirect(`/campgrounds/${campground.id}`);
+    geocoder.geocode(req.body.campground.location, (err, data) => {
+      const lat = data.results[0].geometry.location.lat;
+      const lng = data.results[0].geometry.location.lng;
+      const location = data.results[0].formatted_address;
+      req.body.campground.location = location;
+      req.body.campground.lat = lat;
+      req.body.campground.lng = lng;
+      Campground.create(req.body.campground, (err, campground) => {
+        if (err) {
+          req.flash("error", err.message);
+          return res.redirect("back");
+        }
+        res.redirect(`/campgrounds/${campground.id}`);
+      });
     });
   });
 });
 
 // update a campground
 router.put("/:id", middleware.checkCampgroundOwnership, (req, res) => {
-  Campground.findByIdAndUpdate(
-    req.params.id,
-    req.body.campground,
-    (err, campground) => {
-      if (err) {
-        req.flash("error", "A database error has occurred.");
-        res.redirect("back");
-      } else {
-        req.flash(
-          "success",
-          `Successfully updated the ${campground.name} campground.`
-        );
-        res.redirect(`/campgrounds/${campground._id}`);
+  geocoder.geocode(req.body.campground.location, (err, data) => {
+    const lat = data.results[0].geometry.location.lat;
+    const lng = data.results[0].geometry.location.lng;
+    const location = data.results[0].formatted_address;
+    req.body.campground.location = location;
+    req.body.campground.lat = lat;
+    req.body.campground.lng = lng;
+    Campground.findByIdAndUpdate(
+      req.params.id,
+      req.body.campground,
+      (err, campground) => {
+        if (err) {
+          req.flash("error", "A database error has occurred.");
+          res.redirect("back");
+        } else {
+          req.flash(
+            "success",
+            `Successfully updated the ${campground.name} campground.`
+          );
+          res.redirect(`/campgrounds/${campground._id}`);
+        }
       }
-    }
-  );
+    );
+  });
 });
 
 // delete a campground
