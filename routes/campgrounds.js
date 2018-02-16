@@ -20,10 +20,8 @@ const upload = multer({ storage: storage, fileFilter: imageFilter });
 const cloudinary = require("cloudinary");
 cloudinary.config({
   cloud_name: "drumit",
-  // api_key: process.env.CLOUDINARY_API_KEY,
-  // api_secret: process.env.CLOUDINARY_API_SECRET
-  api_key: "365484345515932",
-  api_secret: "FPFWYvpFdWHovzzBKw-WSKqF7gI"
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
 // show all campgrounds
@@ -66,9 +64,10 @@ router.get("/:id/edit", middleware.checkCampgroundOwnership, (req, res) => {
 
 // create a new campground in the database
 router.post("/", middleware.isLoggedIn, upload.single("image"), (req, res) => {
-  cloudinary.uploader.upload(req.file.path, (result) => {
+  cloudinary.uploader.upload(req.file.path, result => {
     // add cloudinary url for the image to the campground object under image property
     req.body.campground.image = result.secure_url;
+    req.body.campground.imageID = result.public_id;
     // add author to campground
     req.body.campground.author = {
       id: req.user._id,
@@ -86,7 +85,6 @@ router.post("/", middleware.isLoggedIn, upload.single("image"), (req, res) => {
 
 // update a campground
 router.put("/:id", middleware.checkCampgroundOwnership, (req, res) => {
-  // req.body.campground.image = `https://source.unsplash.com/random/700x400/?${req.body.campground.image}`;
   Campground.findByIdAndUpdate(
     req.params.id,
     req.body.campground,
@@ -107,15 +105,33 @@ router.put("/:id", middleware.checkCampgroundOwnership, (req, res) => {
 
 // delete a campground
 router.delete("/:id", middleware.checkCampgroundOwnership, (req, res) => {
-  Campground.findByIdAndRemove(req.params.id, err => {
+  // cloudinary.uploader.destroy(campground.imageID, (result) => { console.log(result) });
+  Campground.findById(req.params.id, (err, campground) => {
     if (err) {
       req.flash("error", "A database error has occurred.");
       res.redirect("back");
     } else {
-      req.flash("success", `Campground deleted.`);
-      res.redirect("/campgrounds");
+      cloudinary.uploader.destroy(campground.imageID, (result) => {});
+      campground.remove((err, campground) => {
+        if (err) {
+          req.flash("error", "A database error has occurred.");
+          res.redirect("back");
+        } else {
+          req.flash("success", `Campground deleted.`);
+          res.redirect("/campgrounds");
+        }
+      });
     }
   });
+  // Campground.findByIdAndRemove(req.params.id, err => {
+  //   if (err) {
+  //     req.flash("error", "A database error has occurred.");
+  //     res.redirect("back");
+  //   } else {
+  //     req.flash("success", `Campground deleted.`);
+  //     res.redirect("/campgrounds");
+  //   }
+  // });
 });
 
 module.exports = router;

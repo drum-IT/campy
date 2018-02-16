@@ -34,7 +34,7 @@ router.post("/register", (req, res) => {
       firstName: req.body.firstName,
       lastName: req.body.lastName,
       email: req.body.email,
-      avatar: req.body.avatar,
+      avatar: req.body.avatar === '' ? "http://i.pravatar.cc/300" : req.body.avatar,
       bio: req.body.bio
     }
   );
