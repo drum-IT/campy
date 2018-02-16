@@ -4,6 +4,9 @@ const passport = require("passport");
 const User = require("../models/user");
 const middleware = require("../middleware/index");
 const Campground = require("../models/campground");
+const async = require("async");
+const nodemailer = require("nodemailer");
+const crypto = require("crypto");
 
 router.get("/", (req, res) => {
   res.render("landing");
@@ -24,6 +27,10 @@ router.get("/logout", (req, res) => {
   req.logout();
   req.flash("success", "You have been logged out.");
   res.redirect("/campgrounds");
+});
+
+router.get("/forgot", (req, res) => {
+  res.render("forgot");
 });
 
 // create a new user, add them to the database, and authenticate them
@@ -64,11 +71,122 @@ router.post(
   "/login",
   passport.authenticate("local", {
     successRedirect: "/campgrounds",
-    failureRedirect: "/login"
+    failureRedirect: "/login",
+    failureFlash: true,
+    successFlash: "Welcome back!"
   }),
   (req, res) => {}
 );
 
+router.get("/reset/:token", (req, res) => {
+  User.findOne({ resetPasswordToken: req.params.token, resetPasswordExpires: { $gt: Date.now() } }, (err, user) => {
+    if (!user) {
+      req.flash("error", "Password reset token is invalid or has expired.");
+      return res.redirect("/forgot");
+    }
+    res.render("reset", { token: req.params.token });
+  });
+});
+
+router.post("/reset/:token", (req, res) => {
+  async.waterfall([
+    (done) => {
+      User.findOne({ resetPasswordToken: req.params.token, resetPasswordExpires: { $gt: Date.now() } }, (err, user) => {
+        if (!user) {
+          req.flash("error", "Password reset token is invalid or has expired.");
+          return res.redirect("/forgot");
+        }
+        if (req.body.password === req.body.confirm) {
+          user.setPassword(req.body.password, (err) => {
+            user.resetPasswordToken = undefined;
+            user.resetPasswordExpires = undefined;
+            user.save(err => {
+              req.logIn(user, err => {
+                done(err, user);
+              });
+            });
+          });
+        } else {
+          req.flash("error", "Passwords do not match.");
+          return res.redirect("back");
+        }
+      });
+    },
+    (user, done) => {
+      const smtpTransport = nodemailer.createTransport({
+        service: "Gmail",
+        auth: {
+          user: process.env.GMAIL_USER,
+          pass: process.env.GMAIL_PW
+        }
+      });
+      const mailOptions = {
+        to: user.email,
+        from: "campycontact@gmail.com",
+        subject: "Your Campy password has been changed",
+        text: "Hello,\n\n" + "This is a confirmation that the Campy password for your account has been changed."
+      };
+      smtpTransport.sendMail(mailOptions, (err) => {
+        req.flash("success", "Your password has been changed!");
+        done(err);
+      });
+    }
+  ], (err) => {
+    res.redirect("/campgrounds");
+  });
+});
+
+router.post("/forgot", (req, res) => {
+  async.waterfall([
+    (done) => {
+      crypto.randomBytes(20, (err, buf) => {
+        const token = buf.toString('hex');
+        done(err, token);
+      });
+    },
+    (token, done) => {
+      User.findOne({ email: req.body.email }, (err, user) => {
+        if (!user) {
+          req.flash("error", "A user account with that email address was not found.");
+          return res.redirect("/forgot");
+        }
+
+        user.resetPasswordToken = token;
+        user.resetPasswordExpires = Date.now() + 3600000;
+
+        user.save(err => {
+          done(err, token, user);
+        });
+      });
+    },
+    (token, user, done) => {
+      const smtpTransport = nodemailer.createTransport({
+        service: "Gmail",
+        auth: {
+          user: process.env.GMAIL_USER,
+          pass: process.env.GMAIL_PW
+        }
+      });
+      const mailOptions = {
+        to: user.email,
+        from: "campycontact@gmail.com",
+        subject: "Campy Password Reset",
+        text: "Click below to reset your Campy password." + "\n\n" + (process.env.DEV_URL || "https://") + req.headers.host + "/reset/" + token
+      };
+      smtpTransport.sendMail(mailOptions, (err) => {
+        req.flash("success", `A password reset email has been sent to ${user.email}.`);
+        done(err, "done");
+      });
+    }
+  ], (err) => {
+    if (err) {
+      return next(err);
+    }
+    res.redirect("/forgot");
+  });
+});
+
+// get a user profile
 router.get("/users/:user_id", (req, res) => {
   User.findById(req.params.user_id, (err, user) => {
     if (err) {
