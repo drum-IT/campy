@@ -38,7 +38,7 @@ router.post("/register", (req, res) => {
       bio: req.body.bio
     }
   );
-  if (req.body.adminCode === "admin") {
+  if (req.body.adminCode === process.env.ADMIN_CODE) {
     user.isAdmin = true;
   }
   User.register(user, req.body.password, (err, newUser) => {

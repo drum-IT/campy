@@ -105,7 +105,6 @@ router.put("/:id", middleware.checkCampgroundOwnership, (req, res) => {
 
 // delete a campground
 router.delete("/:id", middleware.checkCampgroundOwnership, (req, res) => {
-  // cloudinary.uploader.destroy(campground.imageID, (result) => { console.log(result) });
   Campground.findById(req.params.id, (err, campground) => {
     if (err) {
       req.flash("error", "A database error has occurred.");
@@ -123,15 +122,6 @@ router.delete("/:id", middleware.checkCampgroundOwnership, (req, res) => {
       });
     }
   });
-  // Campground.findByIdAndRemove(req.params.id, err => {
-  //   if (err) {
-  //     req.flash("error", "A database error has occurred.");
-  //     res.redirect("back");
-  //   } else {
-  //     req.flash("success", `Campground deleted.`);
-  //     res.redirect("/campgrounds");
-  //   }
-  // });
 });
 
 module.exports = router;
