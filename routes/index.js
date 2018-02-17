@@ -19,6 +19,9 @@ router.get("/register", (req, res) => {
 
 // show the login form
 router.get("/login", (req, res) => {
+  if (req.headers.referer.includes("/campgrounds/")) {
+    req.session.lastPage = req.headers.referer;
+  }
   res.render("login", { page: "login" });
 });
 
@@ -77,7 +80,7 @@ router.post(
   }),
   (req, res) => {
     req.flash("success", `Welcome back, ${req.user.username}!`);
-    res.redirect("/campgrounds");
+    res.redirect(req.session.lastPage || "/campgrounds");
   }
 );
 

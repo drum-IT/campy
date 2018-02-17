@@ -4,8 +4,28 @@
       <h1>Welcome to Campy</h1>
       <p>View and share campgrounds from all over the world</p>
       <p>
-        <a class="btn btn-primary btn-large" href="/campgrounds/new">Add New Campground</a>
+        <a class="btn btn-primary btn-large" href="/campgrounds/new">
+          <span class="glyphicon glyphicon-plus-sign" aria-hidden="true"></span> Add New Campground
+        </a>
+        <a class="btn btn-success" role="button" data-toggle="collapse" href="#collapseSearch" aria-expanded="false" aria-controls="collapseSearch">
+          <span class="glyphicon glyphicon-search" aria-hidden="true"></span> Find a Campground
+        </a>
+        <div class="collapse" id="collapseSearch">
+            <form action="/campgrounds" method="GET" class="form">
+              <div class="form-group">
+                <input class="form-control" type="text" name="search" placeholder="Name, location, description, etc...">
+              </div>
+              <div class="form-group">
+                <input class="btn btn-default" type="submit" value="Search">
+              </div>
+            </form>
+          </div>
       </p>
+      
+      <!-- <button class="btn btn-default" onclick="getLocation()">Get Location</button>
+      <p id="location">
+        
+      </p> -->
     </div>
   </header>
 
@@ -26,4 +46,18 @@
       </div>
     <% }); %>
   </div>
+  <script>
+    const local = document.getElementById("location");
+    function getLocation() {
+      local.innerHTML = `Locating...`;
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(showPosition);
+      } else {
+        local.innerHTML = "Geolocation not supported.";
+      }
+    }
+    function showPosition(position) {
+      local.innerHTML = `Lat: ${position.coords.latitude} Long: ${position.coords.longitude}`;
+    }
+  </script>
 <% include ../partials/footer %>

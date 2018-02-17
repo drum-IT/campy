@@ -1,12 +1,11 @@
 <% include ../partials/header %>
   <div class="row">
+    <!-- INFO -->
     <div class="col-md-3">
-      <p class="lead">Campy</p>
-      <!-- <div class="list-group">
-        <li class="list-group-item active">Info 1</li>
-        <li class="list-group-item">Info 2</li>
-        <li class="list-group-item">Info 3</li>
-      </div> -->
+      <p class="lead"><%= campground.name %></p>
+      <div class="list-group">
+        <li class="list-group-item"><%= campground.location %></li>
+      </div>
       <div id="map"></div>
     </div>
     <div class="col-md-9">
@@ -39,7 +38,8 @@
           <% } %>
         </div>
       </div>
-      
+
+      <!-- COMMENTS -->
       <div class="well">
         <div class="text-right">
           <a class="btn btn-success" role="button" data-toggle="collapse" href="#collapseComment" aria-expanded="false" aria-controls="collapseComment">
@@ -132,7 +132,7 @@
         var lng = <%= campground.lng %>;
         var center = {lat: lat, lng: lng };
         var map = new google.maps.Map(document.getElementById('map'), {
-            zoom: 10,
+            zoom: 12,
             center: center,
             scrollwheel: false
         });
